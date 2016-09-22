@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using ViDi2.Training.UI;
+using ViDi2.Training;
 
 namespace ClassLibrary2
 {
@@ -12,7 +13,7 @@ namespace ClassLibrary2
     {
         public void DeInitialize()
         {
-            throw new NotImplementedException();
+            
         }
 
         public string Description
@@ -42,6 +43,41 @@ namespace ClassLibrary2
 
         void Run()
         {
+            try {
+                ITool currentTool = context.MainWindow.ToolChain.Tool;
+                if (currentTool.Type == ViDi2.ToolType.Blue && ((IBlueTool)currentTool).Models.Count() > 0)
+                {
+                    IGreenTool greenTool = (IGreenTool) currentTool.Children.Add("Green", ViDi2.ToolType.Green);
+                    IBlueRegionOfInterest blueROI = (IBlueRegionOfInterest) greenTool.RegionOfInterest;
+                    blueROI.Model = ((IBlueTool) currentTool).Models.First();
+                    double fsize = currentTool.Parameters.FeatureSize * 2;
+                    blueROI.Size = new System.Windows.Size(fsize, fsize);
+                    greenTool.Database.Process("", false);
+                    var greenViews = greenTool.Database.List("");
+                    var blueViews = currentTool.Database.List("");
+
+                    foreach (var blueKeyPair in blueViews)
+                    {
+                        var blueMarking = currentTool.Database.GetMarking(blueKeyPair.Key.Filename);
+                        var greenMarking = greenTool.Database.GetMarking(blueKeyPair.Key.Filename);
+                    
+                        foreach (ViDi2.IBlueLabeledView blueView in blueMarking.Views) {                        
+                            int matchNumber = 0;
+                            foreach (var match in blueView.Matches)
+                            {
+                                char featureId = match.Features.First().Id;
+
+                                greenTool.Database.Tag("'" + blueKeyPair.Key.Filename + ":" + matchNumber + "'", featureId + "");
+                                ++matchNumber;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                System.Windows.MessageBox.Show(e.Message);
+            }
         }
 
         public string Name
