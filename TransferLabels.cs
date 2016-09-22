@@ -8,7 +8,7 @@ using ViDi2.Training.UI;
 
 namespace ClassLibrary2
 {
-    public class TransferLabels : ViDi2.Training.UI.IPlugin
+    public class Class1 : ViDi2.Training.UI.IPlugin
     {
         public void DeInitialize()
         {
@@ -30,7 +30,7 @@ namespace ClassLibrary2
             var pluginContainerMenuItem =
                context.MainWindow.MainMenu.Items.OfType<System.Windows.Controls.MenuItem>().
                First(i => (string)i.Header == "Plugins");
-            pluginMenuItem = new MenuItem)(
+            pluginMenuItem = new MenuItem()
             {
                 Header = ((IPlugin)this).Name,
                 IsEnabled = true,
@@ -42,7 +42,6 @@ namespace ClassLibrary2
 
         void Run()
         {
-
         }
 
         public string Name
