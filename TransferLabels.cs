@@ -37,7 +37,13 @@ namespace ClassLibrary2
                 IsEnabled = true,
                 ToolTip = ((IPlugin)this).Description
             };
-            pluginMenuItem.Click += (o, a) => { Run(); };
+            pluginMenuItem.Click += (o, a) =>
+            {
+                Task.Run(() =>
+                {
+                    Run();
+                });
+            };
             pluginContainerMenuItem.Items.Add(pluginMenuItem);   
         }
 
@@ -47,31 +53,81 @@ namespace ClassLibrary2
                 ITool currentTool = context.MainWindow.ToolChain.Tool;
                 if (currentTool.Type == ViDi2.ToolType.Blue && ((IBlueTool)currentTool).Models.Count() > 0)
                 {
-                    IGreenTool greenTool = (IGreenTool) currentTool.Children.Add("Green", ViDi2.ToolType.Green);
-                    IBlueRegionOfInterest blueROI = (IBlueRegionOfInterest) greenTool.RegionOfInterest;
-                    blueROI.Model = ((IBlueTool) currentTool).Models.First();
+                    IBlueTool blueTool = (IBlueTool)currentTool;
+                    IGreenTool greenTool = (IGreenTool)currentTool.Children.Add("Green", ViDi2.ToolType.Green);
+                    IBlueRegionOfInterest blueROI = (IBlueRegionOfInterest)greenTool.RegionOfInterest;
+                    blueROI.Model = ((IBlueTool)currentTool).Models.First();
                     double fsize = currentTool.Parameters.FeatureSize * 2;
                     blueROI.Size = new System.Windows.Size(fsize, fsize);
+
                     greenTool.Database.Process("", false);
+
                     var greenViews = greenTool.Database.List("");
-                    var blueViews = currentTool.Database.List("");
+                    var blueViews = blueTool.Database.List("");
 
-                    foreach (var blueKeyPair in blueViews)
+                    string previousFilename = "";
+
+                    using (greenTool.Database.DeferChangedSignal())
                     {
-                        var blueMarking = currentTool.Database.GetMarking(blueKeyPair.Key.Filename);
-                        var greenMarking = greenTool.Database.GetMarking(blueKeyPair.Key.Filename);
-                    
-                        foreach (ViDi2.IBlueLabeledView blueView in blueMarking.Views) {                        
-                            int matchNumber = 0;
-                            foreach (var match in blueView.Matches)
+                        foreach (var blueKeyPair in blueViews)
+                        {
+                            if (blueKeyPair.Key.Filename != previousFilename)
                             {
-                                char featureId = match.Features.First().Id;
+                                previousFilename = blueKeyPair.Key.Filename;
 
-                                greenTool.Database.Tag("'" + blueKeyPair.Key.Filename + ":" + matchNumber + "'", featureId + "");
-                                ++matchNumber;
+                                var blueMarking = blueTool.Database.GetMarking(blueKeyPair.Key.Filename);
+                                var greenMarking = greenTool.Database.GetMarking(blueKeyPair.Key.Filename);
+
+                                int matchNumber = 0;
+
+                                foreach (var blueView in blueMarking.Views)
+                                {
+                                    if (blueView is ViDi2.IBlueLabeledView)
+                                    {
+                                        var labeledBlueView = (ViDi2.IBlueLabeledView)blueView;
+
+                                        foreach (var match in labeledBlueView.Matches)
+                                        {
+                                            char closestFeatureId = '0';
+                                            double closestDistance = Double.MaxValue;
+
+                                            foreach (var labeledMatch in labeledBlueView.LabeledMatches)
+                                            {
+                                                double length = (match.Position - labeledMatch.Position).Length;
+                                                if (length < closestDistance)
+                                                {
+                                                    closestFeatureId = labeledMatch.Features.First().Id;
+                                                    closestDistance = length;
+                                                }
+                                            }
+
+                                            var key = new ViewKey(blueKeyPair.Key.Filename, matchNumber);
+
+                                            if (closestDistance < fsize / 4)
+                                            {
+                                                greenTool.Database.Tag(key.ToFilterString(), "" + closestFeatureId);
+                                            }
+                                            else
+                                            {
+                                                greenTool.Database.Tag(key.ToFilterString(), "False positive");
+                                            }
+
+                                            ++matchNumber;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        matchNumber += blueView.Matches.Count;
+                                    }
+                                }
                             }
                         }
                     }
+                    System.Windows.MessageBox.Show("Done!");
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("The current tool is not a blue tool having at least one model.");
                 }
             }
             catch (Exception e)
