@@ -18,7 +18,7 @@ namespace TransferLabels
 
         public string Description
         {
-            get { return "create a green tool with blue tool label"; }
+            get { return "creates a green tool on top of an existing blue tool and transfers the labels"; }
         }
 
         IPluginContext context;
@@ -138,7 +138,7 @@ namespace TransferLabels
 
         public string Name
         {
-            get { return "Create a green tool on top of an existing blue tool and transfer the labels"; }
+            get { return "Transfer labels"; }
         }
 
         public int Version
