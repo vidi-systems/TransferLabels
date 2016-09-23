@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using ViDi2.Training.UI;
 using ViDi2.Training;
 
-namespace ClassLibrary2
+namespace TransferLabels
 {
     public class Class1 : ViDi2.Training.UI.IPlugin
     {
@@ -138,7 +138,7 @@ namespace ClassLibrary2
 
         public string Name
         {
-            get { return "my test plugin"; }
+            get { return "Create a green tool on top of an existing blue tool and transfer the labels"; }
         }
 
         public int Version
